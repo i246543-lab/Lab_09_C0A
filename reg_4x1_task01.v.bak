@@ -1,0 +1,97 @@
+module decoder_2_to4(wr, write_enable, dec_out);
+input [1:0] wr;
+input write_enable;
+output reg [3:0] dec_out;
+    always @(*) begin
+        if(write_enable) begin
+            case(wr)
+                2'b00: dec_out= 4'b0001;
+                2'b01: dec_out= 4'b0010;
+                2'b10: dec_out= 4'b0100;
+                2'b11: dec_out= 4'b1000;
+                default: dec_out= 4'b0000;
+             endcase
+        end 
+        else begin
+            dec_out= 4'b0000;
+        end
+    end
+endmodule
+module mux4_1(in0, in1, in2, in3, sel, out);
+input [3:0] in0, in1, in2, in3;
+input [1:0] sel;
+output reg [3:0] out;
+    always @(*) begin
+    if (sel==2'b00)
+        out= in0;
+    else if (sel==2'b01)
+        out= in1;
+    else if (sel==2'b10)
+        out= in2;
+    else if (sel==2'b11)
+        out= in3;
+    else
+        out= 4'b0000;
+    end
+endmodule
+module register_4bit(load, clk, d, q);
+input clk, load; //decoder output (load)
+input [3:0] d; //data input
+output reg [3:0] q;
+    initial begin
+        q=4'b0000;
+    end
+    always @ (posedge clk) begin
+        if(load)
+            q <= d;
+    end
+endmodule
+module register_file_4x4(data_in, wr, write_enable, rd1, rd2, clk, data_out1, data_out2);
+input write_enable, clk;
+input [1:0] wr, rd1, rd2;
+input [3:0] data_in;
+output [3:0] data_out1, data_out2;
+wire [3:0] dec_out, q0, q1, q2, q3; 
+//instantiate decoder
+decoder_2_to4 decoder(wr, write_enable, dec_out);
+//instantiate four 4-bit registers
+register_4bit reg0(.load(dec_out[0]), .clk(clk), .d(data_in), .q(q0));
+register_4bit reg1(.load(dec_out[1]), .clk(clk), .d(data_in), .q(q1));
+register_4bit reg2(.load(dec_out[2]), .clk(clk), .d(data_in), .q(q2));
+register_4bit reg3(.load(dec_out[3]), .clk(clk), .d(data_in), .q(q3));
+//instantiate two 4-to-1 multiplexers 
+mux4_1 mux1(q0, q1, q2, q3, rd1, data_out1);
+mux4_1 mux2(q0, q1, q2, q3, rd2, data_out2);
+endmodule
+module testbench_reg_file();
+reg write_enable, clk;
+reg [1:0] wr, rd1, rd2;
+reg [3:0] data_in;
+wire [3:0] data_out1, data_out2;
+register_file_4x4 uut(data_in, wr, write_enable, rd1, rd2, clk, data_out1, data_out2);
+always 
+#5 clk= ~clk;
+initial
+begin
+data_in=0;
+wr=0;
+write_enable=0;
+rd1=0;
+rd2=0;
+clk=0;
+#10
+write_enable=1;
+wr= 2'b01;
+data_in= 4'd6;
+#10
+wr= 2'b10;
+data_in= 4'd3;
+#10
+wr= 2'b11;
+data_in= 4'd13;
+#10
+write_enable=0;
+rd1= 2'b01;
+rd2= 2'b10;
+end
+endmodule

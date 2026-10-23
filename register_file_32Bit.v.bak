@@ -1,0 +1,98 @@
+module decoder_5_to32(wr, write_enable, dec_out);
+input [4:0] wr;
+input write_enable;
+output reg [31:0] dec_out;
+    always @(*) begin
+        dec_out= 32'h00000000;
+       if(write_enable &&(wr!= 5'd0))
+            dec_out[wr]= 1'b1;
+    end
+endmodule
+module mux32_1(sel, out);
+reg [31:0] reg_data [0:31]; //32-bit data n 32 registers 
+input [4:0] sel;
+output reg [31:0] out;
+    always @(*) begin
+        if(sel==5'd0)
+            out= 32'h00000000;
+        else
+        out= reg_data[sel];
+    end
+endmodule
+module register_32bit(load, clk, reset, d, q);
+input clk, load, reset; //decoder output (load)
+input [31:0] d; //data input
+output reg [31:0] q;
+    always @ (posedge clk) begin
+        if(reset)
+            q <= 32'h00000000;
+        else if(load)
+            q <= d;
+    end
+endmodule
+//module register_file_32x32(clk, reset, write_enable, wr, rd1, rd2, data_in, data_out1, data_out2);
+//input write_enable, clk, reset;
+//input [4:0] wr, rd1, rd2;
+//input [31:0] data_in;
+//output [31:0] data_out1, data_out2;
+//reg [31:0] reg_file[31:0];
+//integer i;
+//    always @ (posedge clk) begin
+//        if(reset) begin
+//            for(i=0; i<32; i=i+1)
+//                reg_file[i] <= 32'b0;
+//        end
+//        else if(write_enable) begin
+//            if(wr != 5'd0)
+//                reg_file[wr] <= data_in;
+//        end
+//    end
+// Asynchronous Read
+//assign data_out1 = (rd1 == 5'd0) ? 32'b0 : reg_file[rd1];
+//assign data_out2 = (rd2 == 5'd0) ? 32'b0 : reg_file[rd2];
+//endmodule
+module testbench_32Bit_reg_file();
+reg write_enable, clk, reset;
+reg [4:0] wr, rd1, rd2;
+reg [31:0] data_in;
+wire [31:0] data_out1, data_out2;
+register_file_32x32 uut(clk, reset, write_enable, wr, rd1, rd2, data_in, data_out1, data_out2);
+always 
+#5 clk= ~clk;
+initial
+begin
+data_in=0;
+wr=0;
+reset=0;
+write_enable=0;
+rd1=0;
+rd2=0;
+clk=0;
+reset=1;
+#10
+reset=0;
+@(posedge clk);
+write_enable=1;
+wr= 5'd1;
+data_in= 32'd100;
+@(posedge clk);
+wr= 5'd2;       
+data_in= 32'd50;
+@(posedge clk);
+wr= 5'd3;       
+data_in= 32'd7;
+@(posedge clk);
+wr= 5'd4;       
+data_in= 32'd15;
+@(posedge clk);
+write_enable=0;
+rd1= 5'd1;
+rd2= 5'd2;
+@(posedge clk);
+rd1= 5'd2;
+rd2= 5'd1;
+@(posedge clk);
+rd1= 5'd3;
+rd2= 5'd4;
+end
+endmodule
